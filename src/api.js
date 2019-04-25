@@ -3,8 +3,10 @@ let program = require('commander');
 let express = require('express');
 let mysql = require('mysql');
 let EventEmitter = require('events');
+
 let logger = require('./lib/logger').logger;
 let setLogLevel = require('./lib/logger').setLogLevel;
+let apiRoutes = require('./routes/routes-api');
 
 const emitter = new EventEmitter();
 let app = express();
@@ -18,7 +20,7 @@ program
     .option('-d, --dbHost', 'Set Hostname for the mysql DB')
     .option('-u, --dbUser <userDBName>', 'Set DB username')
     .option('-w, --password <passwordDB>', 'Set DB password')
-    .option('-l, --verbosity <logLevel', 'Set log level', setLogLevel)
+    .option('-l, --loglevel <logLevel', 'Set log level', setLogLevel)
     .parse(process.argv);
 
 
@@ -34,7 +36,7 @@ program.password ? passwordDB = program.password : passwordDB = 'root';
 
 logger.info(`***** Starting Todo List API *****`);
 
-app.listen(portAPI, () => logger.info(`Server listening on port ${portAPI} \n`));
+
 
 // Mysql DB connection
 let db = mysql.createConnection({
@@ -57,7 +59,6 @@ db.connect(err => {
             throw err;
         }
 
-        logger.info(`Database "TodoProject" successfully created!`);
         emitter.emit('dbCreated');
 
     })
@@ -78,6 +79,7 @@ db.connect(err => {
         let tableTask = "CREATE TABLE IF NOT EXISTS TodoProject.Task (id INT AUTO_INCREMENT PRIMARY KEY,\
             name VARCHAR(255), status ENUM ('todo', 'done') NOT NULL)";
         createTableDB(tableTask, "Task");
+        
     })
 })
 
@@ -88,9 +90,32 @@ function createTableDB (sql, name) {
             throw err;
         }
         logger.debug(`Table "${name}" created`);
+        if (name == "Task") {
+            db.query("INSERT INTO TodoProject.User (username, password) VALUES ('test', '1234')", (err, result) => {
+                if (err) {
+                    logger.error(`An error occured during the table "${name}" creation`);
+                    throw err;
+                }
+                logger.debug(`Dummy "test" user created`);
+            });
+            emitter.emit('databaseRDY');
+        }
     })
 }
 
 
+emitter.on('databaseRDY', () => {
+    logger.info(`Database "TodoProject" successfully created!`);
+    app.listen(portAPI, () => logger.info(`Server listening on port ${portAPI} \n`));
 
+    app.use((req, res, next) => {
+        logger.debug(`${new Date().toString()} => ${req.originalUrl}`, req.body);
+        next();
+    })
+
+    app.use(express.static('public'));
+    // Replace body-parser in express 4.16+
+    app.use(express.json());
+    app.use(apiRoutes);
+})
 

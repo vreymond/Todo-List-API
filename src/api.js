@@ -2,10 +2,11 @@
 let program = require('commander');
 let express = require('express');
 let mysql = require('mysql');
+let EventEmitter = require('events');
 let logger = require('./lib/logger').logger;
 let setLogLevel = require('./lib/logger').setLogLevel;
 
-
+const emitter = new EventEmitter();
 let app = express();
 
 
@@ -17,7 +18,7 @@ program
     .option('-d, --dbHost', 'Set Hostname for the mysql DB')
     .option('-u, --dbUser <userDBName>', 'Set DB username')
     .option('-w, --password <passwordDB>', 'Set DB password')
-    .option('-v, --verbosity <logLevel', 'Set log level', setLogLevel)
+    .option('-l, --verbosity <logLevel', 'Set log level', setLogLevel)
     .parse(process.argv);
 
 
@@ -57,9 +58,56 @@ db.connect(err => {
         }
 
         logger.info(`Database "TodoProject" successfully created!`);
+        emitter.emit('dbCreated');
 
     })
+
+    emitter.on('dbCreated', () => {
+        
+        // Creation of the Users table into TodoProject database
+        let tableUser = "CREATE TABLE IF NOT EXISTS TodoProject.User (id INT AUTO_INCREMENT PRIMARY KEY,\
+            username VARCHAR(255), password VARCHAR(255))";
+
+        db.query(tableUser, (err, result) => {
+            if (err) {
+                logger.error(`An error occured during the table "User" creation`);
+                throw err;
+            }
+            logger.debug(`Table "User" created`)
+        })
+
+
+        // Creation of the List table into TodoProject database
+        let tableList = "CREATE TABLE IF NOT EXISTS TodoProject.List (id INT AUTO_INCREMENT PRIMARY KEY,\
+            name VARCHAR(255))";
+        
+        db.query(tableList, (err,result) => {
+            if (err) {
+                logger.error(`An error occured during the table "List" creation`);
+                throw err;
+            }
+            logger.debug(`Table "List" created`);
+        })
+
+
+        // Creation of the Task table into TodoProject database
+        let tableTask = "CREATE TABLE IF NOT EXISTS TodoProject.Task (id INT AUTO_INCREMENT PRIMARY KEY,\
+            name VARCHAR(255), status ENUM ('todo', 'done') NOT NULL)";
+        
+        db.query(tableTask, (err,result) => {
+            if (err) {
+                logger.error(`An error occured during the table "Task" creation`);
+                throw err;
+            }
+            logger.debug(`Table "Task" created`);
+        })
+
+        
+    })
 })
+
+
+
 
 
 

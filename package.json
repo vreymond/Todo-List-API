@@ -1,0 +1,33 @@
+{
+  "name": "todo-list-api",
+  "version": "0.0.1",
+  "description": "API that manages to do lists for users",
+  "main": "api.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vreymond/Todo-List-API.git"
+  },
+  "keywords": [
+    "api",
+    "todo",
+    "mysql",
+    "sql"
+  ],
+  "author": "Valentin Reymond",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vreymond/Todo-List-API/issues"
+  },
+  "homepage": "https://github.com/vreymond/Todo-List-API#readme",
+  "devDependencies": {
+    "nodemon": "^1.18.11"
+  },
+  "dependencies": {
+    "commander": "^2.20.0",
+    "express": "^4.16.4",
+    "winston": "^3.2.1"
+  }
+}

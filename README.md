@@ -3,7 +3,7 @@
 
 [![NodeJs](https://img.shields.io/badge/code-NodeJs-brightgreen.svg)](https://nodejs.org/en/)
 [![Javascript](https://img.shields.io/badge/code-JavaScript-blue.svg)]()
-[![Mysql](https://img.shields.io/badge/db-MongoDB_Atlas-red.svg)](https://www.mysql.com)
+[![Mysql](https://img.shields.io/badge/db-MySQL-red.svg)](https://www.mysql.com)
 
 Todo List API using mysql database.
 

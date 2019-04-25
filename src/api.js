@@ -67,46 +67,29 @@ db.connect(err => {
         // Creation of the Users table into TodoProject database
         let tableUser = "CREATE TABLE IF NOT EXISTS TodoProject.User (id INT AUTO_INCREMENT PRIMARY KEY,\
             username VARCHAR(255), password VARCHAR(255))";
-
-        db.query(tableUser, (err, result) => {
-            if (err) {
-                logger.error(`An error occured during the table "User" creation`);
-                throw err;
-            }
-            logger.debug(`Table "User" created`)
-        })
-
-
+        createTableDB(tableUser, "User");
+       
         // Creation of the List table into TodoProject database
         let tableList = "CREATE TABLE IF NOT EXISTS TodoProject.List (id INT AUTO_INCREMENT PRIMARY KEY,\
             name VARCHAR(255))";
-        
-        db.query(tableList, (err,result) => {
-            if (err) {
-                logger.error(`An error occured during the table "List" creation`);
-                throw err;
-            }
-            logger.debug(`Table "List" created`);
-        })
-
+        createTableDB(tableList, "List");
 
         // Creation of the Task table into TodoProject database
         let tableTask = "CREATE TABLE IF NOT EXISTS TodoProject.Task (id INT AUTO_INCREMENT PRIMARY KEY,\
             name VARCHAR(255), status ENUM ('todo', 'done') NOT NULL)";
-        
-        db.query(tableTask, (err,result) => {
-            if (err) {
-                logger.error(`An error occured during the table "Task" creation`);
-                throw err;
-            }
-            logger.debug(`Table "Task" created`);
-        })
-
-        
+        createTableDB(tableTask, "Task");
     })
 })
 
-
+function createTableDB (sql, name) {
+    db.query(sql, (err,result) => {
+        if (err) {
+            logger.error(`An error occured during the table "${name}" creation`);
+            throw err;
+        }
+        logger.debug(`Table "${name}" created`);
+    })
+}
 
 
 

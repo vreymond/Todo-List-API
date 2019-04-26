@@ -3,10 +3,12 @@ let program = require('commander');
 let express = require('express');
 let mysql = require('mysql');
 let EventEmitter = require('events');
+let jsonfile = require('jsonfile')
 
 let logger = require('./lib/logger').logger;
 let setLogLevel = require('./lib/logger').setLogLevel;
 let apiRoutes = require('./routes/routes-api');
+//let dbConnect = require('./db-connect');
 
 const emitter = new EventEmitter();
 let app = express();
@@ -17,7 +19,7 @@ program
     .version('0.0.1')
     .option('-p, --portAPI <portAPI>', 'Set API port listening')
     .option('-P, --portDB <portDB>', 'Set DB port')
-    .option('-d, --dbHost', 'Set Hostname for the mysql DB')
+    .option('-d, --dbHost <dbHost>', 'Set Hostname for the mysql DB')
     .option('-u, --dbUser <userDBName>', 'Set DB username')
     .option('-w, --password <passwordDB>', 'Set DB password')
     .option('-l, --loglevel <logLevel', 'Set log level', setLogLevel)
@@ -36,15 +38,17 @@ program.password ? passwordDB = program.password : passwordDB = 'root';
 
 logger.info(`***** Starting Todo List API *****`);
 
-
-
-// Mysql DB connection
-let db = mysql.createConnection({
+let file = './config-db.json';
+let configUpdate = {
     host: dbHost,
     port: portDB,
     user: dbUser,
     password: passwordDB
-});
+}
+
+jsonfile.writeFileSync('config-db.json', configUpdate, { spaces: 2 })
+
+let db = mysql.createConnection(configUpdate)
 
 db.connect(err => {
     if (err) {
@@ -67,7 +71,7 @@ db.connect(err => {
         
         // Creation of the Users table into TodoProject database
         let tableUser = "CREATE TABLE IF NOT EXISTS TodoProject.User (id INT AUTO_INCREMENT PRIMARY KEY,\
-            username VARCHAR(255), password VARCHAR(255))";
+            username VARCHAR(255) UNIQUE, password VARCHAR(255))";
         createTableDB(tableUser, "User");
        
         // Creation of the List table into TodoProject database
@@ -91,7 +95,7 @@ function createTableDB (sql, name) {
         }
         logger.debug(`Table "${name}" created`);
         if (name == "Task") {
-            db.query("INSERT INTO TodoProject.User (username, password) VALUES ('test', '1234')", (err, result) => {
+            db.query("INSERT IGNORE INTO TodoProject.User (username, password) VALUES ('test', '1234')", (err, result) => {
                 if (err) {
                     logger.error(`An error occured during the table "${name}" creation`);
                     throw err;

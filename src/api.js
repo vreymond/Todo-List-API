@@ -81,7 +81,7 @@ db.connect(err => {
 
         // Creation of the Task table into TodoProject database
         let tableTask = "CREATE TABLE IF NOT EXISTS TodoProject.Task (id INT AUTO_INCREMENT PRIMARY KEY,\
-            name VARCHAR(255), status ENUM ('todo', 'done') NOT NULL)";
+            TodoListName VARCHAR(255), name VARCHAR(255), status ENUM ('todo', 'done') NOT NULL)";
         createTableDB(tableTask, "Task");
         
     })

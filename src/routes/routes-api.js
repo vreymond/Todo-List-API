@@ -13,11 +13,17 @@ let configDB = jsonfile.readFileSync(configDBfile)
 let db = mysql.createConnection(configDB);
 
 
+/*
+-----------------------------------------------
+                Auth route
+-----------------------------------------------
+*/
+
 router.post('/login_check', (req, res) => {
     let user = req.body;
     let username = user.username;
     let password = user.password;
-    let query = `SELECT EXISTS (SELECT * FROM TodoProject.User WHERE \
+    let query = `SELECT EXISTS (SELECT * FROM TodoProject.User WHERE
         username="${username}" AND password="${password}")`;
 
     logger.debug(`Receiving logs from client...\n \t ${JSON.stringify(user)}`);
@@ -28,6 +34,8 @@ router.post('/login_check', (req, res) => {
             logger.error(`An error occured during login statement`);
             throw err;
         }
+
+        // Testing the existence of the user in the database
         if (Object.values(result[0])[0] === 0) {
 
             logger.error(`No user named "${username}" found in database or password is incorrect`)
@@ -44,13 +52,22 @@ router.post('/login_check', (req, res) => {
     })
 });
 
+/*
+-----------------------------------------------
+                Lists routes
+-----------------------------------------------
+*/
 router.get('/lists/all', tokenCheck, (req, res) => {
     
     jwt.verify(req.token, 'secret_key', (err, data) => {
         if (err) {
-          res.status(500).send("Unexpected error");
+          res.status(401).send("Access token is missing or invalid");
         } else {
-          res.status(200).json([data]);
+            db.query(`SELECT * FROM TodoProject.List`, (err, result) => {
+                console.log(result)
+                res.status(200).json([data]);
+            })
+          
         }
       });
 });
@@ -81,7 +98,44 @@ router.get('/lists/new/:name', tokenCheck, (req, res) => {
             })
         }
     });
-})
+});
+
+/*
+-----------------------------------------------
+                Tasks routes
+-----------------------------------------------
+*/
+
+router.get('/list/:id/new-task/:name', tokenCheck, (req, res) => {
+    let idTodo = req.params.id;
+    let nameTask = req.params.name;
+    let idTask = 0;
+
+    let query = `INSERT INTO TodoProject.Task (TodoListName, name, status) 
+    VALUES ((SELECT name FROM TodoProject.List WHERE id = ${idTodo}), '${nameTask}', 'todo')`
+
+    jwt.verify(req.token, 'secret_key', (err, data) => {
+        if (err) {
+           res.status(401).send("Access token is missing or invalid");
+        }
+        else {
+            db.query(query, (err, result) => {
+                if (err) {
+                    logger.error(`An error occured during the "${nameTask}" task creation`);
+                    throw err;
+                }
+
+                idTask = result.insertId;
+                
+                res.status(200).send({
+                    id: idTask,
+                    name: nameTask,
+                    status: 'todo'
+                });
+            })
+        }
+    })
+});
 
 
 function tokenCheck(req, res, next) {

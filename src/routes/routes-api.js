@@ -32,7 +32,7 @@ router.post('/login_check', (req, res) => {
 
         if (err) {
             logger.error(`An error occured during login statement`);
-            throw err;
+            return res.status(500).send("Unexpected error");
         }
 
         // Testing the existence of the user in the database
@@ -85,7 +85,7 @@ router.get('/lists/new/:name', tokenCheck, (req, res) => {
             db.query(`INSERT INTO TodoProject.List (name) VALUES ('${nameTodo}');`, (err, result, fields) => {
                 if (err) {
                     logger.error(`An error occured during the "${nameTodo}" todo list creation`);
-                    throw err;
+                    return res.status(500).send("Unexpected error");
                 }
                
                 // Get the id of the inserted row
@@ -119,20 +119,31 @@ router.get('/list/:id/new-task/:name', tokenCheck, (req, res) => {
            res.status(401).send("Access token is missing or invalid");
         }
         else {
-            db.query(query, (err, result) => {
+            db.query(`SELECT id FROM TodoProject.List WHERE id = ${idTodo}`, (err, result) => {
                 if (err) {
-                    logger.error(`An error occured during the "${nameTask}" task creation`);
-                    throw err;
-                }
-
-                idTask = result.insertId;
+                    return res.status(500).send("Unexpected error");
+                } 
                 
-                res.status(200).send({
-                    id: idTask,
-                    name: nameTask,
-                    status: 'todo'
-                });
-            })
+                if (result.length === 0) {
+                    res.status(404).send(`The list id "${idTodo}" doesn't exists.`);
+                }
+                else {
+                    db.query(query, (err, result) => {
+                        if (err) {
+                            logger.error(`An error occured during the "${nameTask}" task creation`);
+                            return res.status(500).send("Unexpected error");
+                        }
+        
+                        idTask = result.insertId;
+                        
+                        res.status(200).send({
+                            id: idTask,
+                            name: nameTask,
+                            status: 'todo'
+                        });
+                    })
+                }
+            }) 
         }
     })
 });

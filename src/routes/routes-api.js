@@ -184,11 +184,50 @@ router.get('/list/:id/tasks', tokenCheck, (req, res) => {
                             taskList.push(obj)
                         }
                         
-                        res.status(200).send(taskList)
+                        res.status(200).send(taskList);
                     });
                 }
             })
         }
+    })
+});
+
+
+router.get('/list/:id/update-task', tokenCheck, (req, res) => {
+    let idTodo = req.params.id;
+    let task_id = req.query.task_id;
+    if (!task_id) return res.status(400).send("Task id is missing in request");
+    let status = req.query.status;
+    if (!status) return res.status(400).send("Task status is missing in request");
+    if (!["todo", "done"].includes(status)) return res.status(400).send("Status task must be 'todo or done'");
+
+
+    jwt.verify(req.token, 'secret_key', (err, data) => {
+        if (err) {
+           res.status(401).send("Access token is missing or invalid");
+        }
+
+        else {
+            db.query(`SELECT id FROM TodoProject.List WHERE id = ${idTodo}`, (err, result) => {
+                if (err) {
+                    return res.status(500).send("Unexpected error");
+                } 
+                
+                if (result.length === 0) {
+                    res.status(404).send(`The list id "${idTodo}" doesn't exists.`);
+                }
+                else {
+                    db.query(`UPDATE TodoProject.Task SET status = "${status}" WHERE id = ${task_id}`, (err, result) => {
+                       
+                        res.status(200).send({
+                            id: task_id,
+                            name: result.name,
+                            status: status
+                        })
+                    })
+                }
+            })
+        }   
     })
 });
 

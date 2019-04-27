@@ -106,9 +106,11 @@ router.get('/lists/new/:name', tokenCheck, (req, res) => {
 -----------------------------------------------
 */
 
-router.get('/list/:id/new-task/:name', tokenCheck, (req, res) => {
+router.get('/list/:id/new-task', tokenCheck, (req, res) => {
     let idTodo = req.params.id;
-    let nameTask = req.params.name;
+    let nameTask = req.query.name;
+    if (!nameTask) return res.status(400).send("The name of the new task is missing");
+
     let idTask = 0;
 
     let query = `INSERT INTO TodoProject.Task (TodoListName, name, status) 
@@ -148,6 +150,47 @@ router.get('/list/:id/new-task/:name', tokenCheck, (req, res) => {
     })
 });
 
+
+router.get('/list/:id/tasks', tokenCheck, (req, res) => {
+    let idTodo = req.params.id;
+    let query = `SELECT * FROM TodoProject.Task WHERE TodoListName = (SELECT name FROM
+        TodoProject.List WHERE id = ${idTodo})`;
+    
+    let taskList = [];
+
+    jwt.verify(req.token, 'secret_key', (err, data) => {
+        if (err) {
+           res.status(401).send("Access token is missing or invalid");
+        }
+
+        else {
+            db.query(`SELECT id FROM TodoProject.List WHERE id = ${idTodo}`, (err, result) => {
+                if (err) {
+                    return res.status(500).send("Unexpected error");
+                } 
+                
+                if (result.length === 0) {
+                    res.status(404).send(`The list id "${idTodo}" doesn't exists.`);
+                }
+                else {
+                    db.query(query, (err, result) => {
+
+                        for (let elem of result) {
+                            let obj = {
+                                "id": elem.id,
+                                "name": elem.name,
+                                "status": elem.status
+                            }
+                            taskList.push(obj)
+                        }
+                        
+                        res.status(200).send(taskList)
+                    });
+                }
+            })
+        }
+    })
+});
 
 function tokenCheck(req, res, next) {
     let bearerHeader = req.headers["bearer"];

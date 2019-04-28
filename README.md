@@ -81,6 +81,11 @@ Options:
 ```
 
 The -l (or --loglevel) option allows you to modify the verbosity of the console logs.
+To see debug level just use the following command:
+
+```
+node src/api.js -l debug
+```
 
 Ensure you start the API with the correct pool of options. Set your SQL server logs with options, like: 
 

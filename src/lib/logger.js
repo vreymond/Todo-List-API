@@ -1,3 +1,5 @@
+// Logger file using winston module, facilitate console logs.
+
 let winston = require('winston');
 
 const config = {

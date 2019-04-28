@@ -1,5 +1,5 @@
 {
-  "name": "todo-list-api",
+  "name": "todo-api-jwt",
   "version": "1.0.1",
   "description": "API that manages to do lists for users",
   "main": "api.js",
@@ -32,6 +32,7 @@
     "jsonfile": "^5.0.0",
     "jsonwebtoken": "^8.5.1",
     "mysql": "^2.17.1",
+    "uuid": "^3.3.2",
     "winston": "^3.2.1"
   }
 }

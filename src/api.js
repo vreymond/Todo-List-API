@@ -59,7 +59,7 @@ db.connect(err => {
         logger.error(`An error occured during the connection on the MySQL server.`)
         throw err;
     }
-    logger.info(`Connected to MySQL server on: "${dbHost}:${portDB}"`);
+    logger.info(`Connected to MySQL server on: "http://${dbHost}:${portDB}/"`);
 
     // Creation of the TodoProject database
     db.query("CREATE DATABASE IF NOT EXISTS TodoProject", (err, result) => {
@@ -94,43 +94,48 @@ db.connect(err => {
 })
 
 function createTableDB (sql, name) {
+
     db.query(sql, (err,result) => {
         if (err) {
             logger.error(`An error occured during the table "${name}" creation`);
             throw err;
         }
+
         logger.debug(`Table "${name}" created`);
+
         if (name == "Task") {
             let usernameDummy = 'test';
             let passwordDummy = '1234';
 
+            // Password hash
             bcrypt.hash(passwordDummy, saltRounds, (err, hash) => {
                 let query = `INSERT IGNORE INTO TodoProject.User (username, password) 
                 VALUES ('${usernameDummy}', '${hash}')`;
+
                 db.query(query, (err, result) => {
                     if (err) {
                         logger.error(`An error occured during the table "${name}" creation`);
                         throw err;
                     }
+
                     logger.debug(`Dummy "test" user created`);
+                    emitter.emit('databaseRDY');
                 });
-                emitter.emit('databaseRDY');
-            });
-            
+            }); 
         }
     })
 }
 
-
+// databaseRDY listener, starting api middlewares
 emitter.on('databaseRDY', () => {
     logger.info(`Database "TodoProject" successfully created!`);
     app.listen(portAPI, () => logger.info(`Server listening on port ${portAPI} \n`));
 
+    // Simple log that show the date and the route requested
     app.use((req, res, next) => {
         logger.debug(`${new Date().toString()} => ${req.originalUrl}`, req.body);
         next();
     })
-
     app.use(express.static('public'));
     // Replace body-parser in express 4.16+
     app.use(express.json());

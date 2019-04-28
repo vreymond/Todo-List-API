@@ -82,53 +82,50 @@ router.post('/login_check', (req, res) => {
 
 /* Retrieve all todo lists stored in the database. 
    This is a protected route with JWT */
-router.get('/lists/all', tokenCheck, (req, res) => {
+router.get('/lists/all', headerCheck, (req, res) => {
     
     let queryLists = `SELECT * FROM TodoProject.List;`;
     let queryCountTasks = `SELECT TodoListName, COUNT(TodoListName) FROM TodoProject.Task 
     WHERE TodoListName IS NOT NULL GROUP BY TodoListName`
 
     // Token checking
-    jwt.verify(req.token, secret_key, (err, data) => {
+    if (tokenVerifier(req.token, secret_key) === false) {
+        res.status(401).send("Access token is missing or invalid");
+    }
+    else {
+        db.query(queryLists, (err, result) => { 
+            if (err) return res.status(500).send("Unexpected error");
 
-        if (err) {
-          return res.status(401).send("Access token is missing or invalid");
-        } 
-        else {
-            db.query(queryLists, (err, result) => { 
+            db.query(queryCountTasks, (err, resultCount) => {
+                
                 if (err) return res.status(500).send("Unexpected error");
-                db.query(queryCountTasks, (err, resultCount) => {
-
-                    if (err) return res.status(500).send("Unexpected error");
-                    logger.debug(`Tasks count results: \n ${JSON.stringify(resultCount)}`);
-
-                    // Catching every results case (empty or not)
-                    if (resultCount.length === 0) {
-                        for (let i in result) {
+                logger.debug(`Tasks count results: \n ${JSON.stringify(resultCount)}`);
+                // Catching every results case (empty or not)
+                if (resultCount.length === 0) {
+                    for (let i in result) {
+                        result[i].nb_tasks = 0;
+                    }
+                }
+                else {
+                    for (let i in result) {
+                        if (!resultCount[i]){
                             result[i].nb_tasks = 0;
                         }
-                    }
-                    else {
-                        for (let i in result) {
-                            if (!resultCount[i]){
-                                result[i].nb_tasks = 0;
-                            }
-                            else {
-                                result[i].nb_tasks = resultCount[i]["COUNT(TodoListName)"];
-                            }
+                        else {
+                            result[i].nb_tasks = resultCount[i]["COUNT(TodoListName)"];
                         }
                     }
-                    // Send an array of all todo lists.
-                    res.status(200).json(result);
-                })
+                }
+                // Send an array of all todo lists.
+                res.status(200).json(result);
             })
-        }
-    });
+        })
+    }
 });
 
 /* Create a new todo list with name as query paramater. 
    This is a protected route with JWT */
-router.get('/lists/new', tokenCheck, (req, res) => {
+router.get('/lists/new', headerCheck, (req, res) => {
 
     let nameTodo = req.query.name;
     // checking the req.query object
@@ -137,30 +134,27 @@ router.get('/lists/new', tokenCheck, (req, res) => {
     let queryNew = `INSERT INTO TodoProject.List (name) VALUES ('${nameTodo}');`;
 
     // Token checking
-    jwt.verify(req.token, secret_key, (err, data) => {
-        if (err) {
-           return res.status(401).send("Access token is missing or invalid");
-        }
-        else {
-            db.query(queryNew, (err, result, fields) => {
-
-                if (err) {
-                    logger.error(`An error occured during the "${nameTodo}" todo list creation`, err);
-                    return res.status(500).send("Unexpected error");
-                }
-                logger.debug(`"${nameTodo}" created!`);
-
-                // Get the id of the inserted row
-                idTodo = result.insertId;
-                // Send confirmation of the created list
-                res.status(200).send({
-                    id: idTodo,
-                    name: nameTodo,
-                    nb_tasks: 0
-                });
-            })
-        }
-    });
+    if (tokenVerifier(req.token, secret_key) === false) {
+        res.status(401).send("Access token is missing or invalid");
+    }
+    else {
+        db.query(queryNew, (err, result, fields) => {
+            
+            if (err) {
+                logger.error(`An error occured during the "${nameTodo}" todo list creation`, err);
+                return res.status(500).send("Unexpected error");
+            }
+            logger.debug(`"${nameTodo}" created!`);
+            // Get the id of the inserted row
+            idTodo = result.insertId;
+            // Send confirmation of the created list
+            res.status(200).send({
+                id: idTodo,
+                name: nameTodo,
+                nb_tasks: 0
+            });
+        })
+    }
 });
 
 /*
@@ -171,7 +165,7 @@ router.get('/lists/new', tokenCheck, (req, res) => {
 
 /* Create a new task in specific list with name as query paramater. 
    This is a protected route with JWT */
-router.get('/list/:id/new-task', tokenCheck, (req, res) => {
+router.get('/list/:id/new-task', headerCheck, (req, res) => {
     let idTodo = req.params.id;
     let nameTask = req.query.name;
     // checking the req.query object
@@ -183,46 +177,41 @@ router.get('/list/:id/new-task', tokenCheck, (req, res) => {
     VALUES ((SELECT name FROM TodoProject.List WHERE id = ${idTodo}), '${nameTask}', 'todo')`
 
     // Token checking
-    jwt.verify(req.token, secret_key, (err, data) => {
-        if (err) {
-           res.status(401).send("Access token is missing or invalid");
-        }
-        else {
-            db.query(queryID, (err, result) => {
-                if (err) {
-                    return res.status(500).send("Unexpected error");
-                } 
-                
-                if (result.length === 0) {
-                    res.status(404).send(`The list id "${idTodo}" doesn't exists.`);
-                }
-                else {
-                    db.query(queryInsertTask, (err, result) => {
-                        if (err) {
-                            logger.error(`An error occured during the "${nameTask}" task creation`, err);
-                            return res.status(500).send("Unexpected error");
-                        }
-                        logger.debug(`"${nameTask}" created into the todolist ${idTodo}!`)
-        
-                        idTask = result.insertId;
-                        
-                        // Send confirmation of the created task
-                        res.status(200).send({
-                            id: idTask,
-                            name: nameTask,
-                            status: 'todo'
-                        });
-                    })
-                }
-            }) 
-        }
-    })
+    if (tokenVerifier(req.token, secret_key) === false) {
+        res.status(401).send("Access token is missing or invalid");
+    }
+    else {
+        db.query(queryID, (err, result) => {
+            if (err) return res.status(500).send("Unexpected error");
+            if (result.length === 0) {
+                res.status(404).send(`The list id "${idTodo}" doesn't exists.`);
+            }
+            else {
+                db.query(queryInsertTask, (err, result) => {
+
+                    if (err) {
+                        logger.error(`An error occured during the "${nameTask}" task creation`, err);
+                        return res.status(500).send("Unexpected error");
+                    }
+
+                    logger.debug(`"${nameTask}" created into the todolist ${idTodo}!`)
+                    idTask = result.insertId;
+                    // Send confirmation of the created task
+                    res.status(200).send({
+                        id: idTask,
+                        name: nameTask,
+                        status: 'todo'
+                    });
+                })
+            }
+        })
+    }
 });
 
 
 /* Retrieve all tasks from a specific todo list. 
    This is a protected route with JWT */
-router.get('/list/:id/tasks', tokenCheck, (req, res) => {
+router.get('/list/:id/tasks', headerCheck, (req, res) => {
     let idTodo = req.params.id;
     let queryID = `SELECT id FROM TodoProject.List WHERE id = ${idTodo}`;
     let queryTasks = `SELECT * FROM TodoProject.Task WHERE TodoListName = (SELECT name FROM
@@ -231,43 +220,40 @@ router.get('/list/:id/tasks', tokenCheck, (req, res) => {
     let taskList = [];
     
     // Token checking
-    jwt.verify(req.token, secret_key, (err, data) => {
-        if (err) {
-           res.status(401).send("Access token is missing or invalid");
-        }
-
-        else {
-            db.query(queryID, (err, result) => {
-                if (err) return res.status(500).send("Unexpected error");
-                
-                if (result.length === 0) {
-                    res.status(404).send(`The list id "${idTodo}" doesn't exists.`);
-                }
-                else {
-                    db.query(queryTasks, (err, result) => {
-                        if (err) return res.status(500).send("Unexpected error");
-
-                        // Building the response (array of tasks)
-                        for (let elem of result) {
-                            let obj = {
-                                "id": elem.id,
-                                "name": elem.name,
-                                "status": elem.status
-                            }
-                            taskList.push(obj)
-                        }
-                        // Sending an array of all tasks in a todo list
-                        res.status(200).send(taskList);
-                    });
-                }
-            })
-        }
-    })
+    if (tokenVerifier(req.token, secret_key) === false) {
+       res.status(401).send("Access token is missing or invalid");
+    }
+    else {
+        db.query(queryID, (err, result) => {
+            
+            if (err) return res.status(500).send("Unexpected error");
+            if (result.length === 0) {
+                res.status(404).send(`The list id "${idTodo}" doesn't exists.`);
+            }
+            else {
+                db.query(queryTasks, (err, result) => {
+                    
+                    if (err) return res.status(500).send("Unexpected error");
+                    // Building the response (array of tasks)
+                    for (let elem of result) {
+                        let obj = {
+                            "id": elem.id,
+                            "name": elem.name,
+                            "status": elem.status
+                        };
+                        taskList.push(obj);
+                    }
+                    // Sending an array of all tasks in a todo list
+                    res.status(200).send(taskList);
+                });
+            }
+        })
+    }
 });
 
 /* Retrieve all tasks from a specific todo list. 
    This is a protected route with JWT */
-router.get('/list/:id/update-task', tokenCheck, (req, res) => {
+router.get('/list/:id/update-task', headerCheck, (req, res) => {
     let idTodo = req.params.id;
     let task_id = req.query.task_id;
     // Checking req.query obj
@@ -279,43 +265,40 @@ router.get('/list/:id/update-task', tokenCheck, (req, res) => {
     if (!["todo", "done"].includes(status)) return res.status(400).send("Status task must be 'todo or done'");
 
     // Token checking
-    jwt.verify(req.token, secret_key, (err, data) => {
-        if (err) {
-           res.status(401).send("Access token is missing or invalid");
-        }
-
-        else {
-            let queryUpdate = `UPDATE TodoProject.Task SET status = "${status}" WHERE id = ${task_id};`;
-            let queryName = ` SELECT name FROM TodoProject.Task WHERE id = ${task_id};`;
-
-            db.query(`SELECT id FROM TodoProject.List WHERE id = ${idTodo}`, (err, result) => {
-                if (err) return res.status(500).send("Unexpected error");
-
-                if (result.length === 0) {
-                    res.status(404).send(`The list id "${idTodo}" doesn't exists.`);
-                }
-                else {
-                    db.query(queryUpdate + queryName, (err, result) => {
-
-                        if (err) return res.status(500).send("Unexpected error");
-                        if(result[1].length === 0) return res.status(500).send("Unexpected error");
-
-                        logger.debug(`"${result[1][0].name}" task updated to: "${status}"`);
-                        // Sending the updated task
-                        res.status(200).send({
-                            id: task_id,
-                            name: result[1][0].name,
-                            status: status
-                        })
+    if (tokenVerifier(req.token, secret_key) === false) {
+        res.status(401).send("Access token is missing or invalid");
+    }
+    else {
+        let queryUpdate = `UPDATE TodoProject.Task SET status = "${status}" WHERE id = ${task_id};`;
+        let queryName = ` SELECT name FROM TodoProject.Task WHERE id = ${task_id};`;
+        
+        db.query(`SELECT id FROM TodoProject.List WHERE id = ${idTodo}`, (err, result) => {
+            
+            if (err) return res.status(500).send("Unexpected error");
+            if (result.length === 0) {
+                res.status(404).send(`The list id "${idTodo}" doesn't exists.`);
+            }
+            else {
+                db.query(queryUpdate + queryName, (err, result) => {
+                    
+                    if (err) return res.status(500).send("Unexpected error");
+                    if(result[1].length === 0) return res.status(500).send("Unexpected error");
+                    
+                    logger.debug(`"${result[1][0].name}" task updated to: "${status}"`);
+                    // Sending the updated task
+                    res.status(200).send({
+                        id: task_id,
+                        name: result[1][0].name,
+                        status: status
                     })
-                }
-            })
-        }   
-    })
+                })
+            }
+        })
+    }
 });
 
-// Token check function that verify the header of requests
-function tokenCheck(req, res, next) {
+// Header check function that verify the header of requests
+function headerCheck(req, res, next) {
     let bearerHeader = req.headers["bearer"];
 
     if (typeof bearerHeader !== 'undefined') {
@@ -327,6 +310,13 @@ function tokenCheck(req, res, next) {
     else {
         res.status(401).send("Access token is missing or invalid");
     }
+}
+
+// Token check function, return true if token is correct
+function tokenVerifier(token, secret) {
+    jwt.verify(token, secret, (err, data) => {
+        err ? false : true;
+    })
 }
 
 module.exports = router;

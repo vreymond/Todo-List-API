@@ -1,4 +1,4 @@
-// Packages / modules requirement
+// Modules requirement
 let program = require('commander');
 let express = require('express');
 let mysql = require('mysql');
@@ -6,10 +6,10 @@ let EventEmitter = require('events');
 let jsonfile = require('jsonfile');
 let bcrypt = require('bcrypt');
 
+// Files requirement
 let logger = require('./lib/logger').logger;
 let setLogLevel = require('./lib/logger').setLogLevel;
 let apiRoutes = require('./routes/routes-api');
-//let dbConnect = require('./db-connect');
 
 const emitter = new EventEmitter();
 const saltRounds = 10;
@@ -18,7 +18,7 @@ let app = express();
 
 // Commands options manager
 program
-    .version('0.0.1')
+    .version('1.0.0')
     .option('-p, --portAPI <portAPI>', 'Set API port listening')
     .option('-P, --portDB <portDB>', 'Set DB port')
     .option('-d, --dbHost <dbHost>', 'Set Hostname for the mysql DB')
@@ -48,9 +48,10 @@ let configUpdate = {
     password: passwordDB,
     multipleStatements: true
 }
-
+// Updating config file with given options
 jsonfile.writeFileSync('config-db.json', configUpdate, { spaces: 2 })
 
+// Starting connection with the mysql server
 let db = mysql.createConnection(configUpdate)
 
 db.connect(err => {
@@ -60,16 +61,18 @@ db.connect(err => {
     }
     logger.info(`Connected to MySQL server on: "${dbHost}:${portDB}"`);
 
+    // Creation of the TodoProject database
     db.query("CREATE DATABASE IF NOT EXISTS TodoProject", (err, result) => {
         if (err) {
             logger.error(`An error occured during the database creation`);
             throw err;
         }
-
+        // Once created, the dbCreated event is emitted
         emitter.emit('dbCreated');
 
     })
 
+    // dbCreated event catched
     emitter.on('dbCreated', () => {
         
         // Creation of the Users table into TodoProject database
@@ -100,6 +103,7 @@ function createTableDB (sql, name) {
         if (name == "Task") {
             let usernameDummy = 'test';
             let passwordDummy = '1234';
+
             bcrypt.hash(passwordDummy, saltRounds, (err, hash) => {
                 let query = `INSERT IGNORE INTO TodoProject.User (username, password) 
                 VALUES ('${usernameDummy}', '${hash}')`;

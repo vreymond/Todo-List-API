@@ -1,6 +1,6 @@
 {
   "name": "todo-list-api",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "API that manages to do lists for users",
   "main": "api.js",
   "scripts": {

@@ -21,23 +21,32 @@ let db = mysql.createConnection(configDB);
 
 router.post('/login_check', (req, res) => {
     let user = req.body;
+    let keys = Object.keys(user);
+    if (keys.length !== 2 || !keys.includes('username') || !keys.includes('password')) {
+        return res.status(400).send('Json logs must contain only the "username" and "password" keys'); 
+    }
     let username = user.username;
     let password = user.password;
+    let passHash;
    
-    let query = `SELECT password FROM TodoProject.User WHERE EXISTS (SELECT username FROM TodoProject.User WHERE username="${username}")`
-    
+    let query = `SELECT * FROM TodoProject.User WHERE EXISTS 
+    (SELECT username FROM TodoProject.User WHERE username="${username}")`
+
     db.query(query, (err , result) => {
 
         if (err) {
-            logger.error(`An error occured during login statement`);
+            logger.error(`An error occured during login statement`, err);
             return res.status(500).send("Unexpected error");
         }
 
         if (result.length === 0) {
             return res.status(401).send(`Username "${username}" doesn't exists.`);
         }
-        
-        bcrypt.compare(password, result[0].password, function(err, bcryptRes) {
+        for (let i of result) {
+            if (i.username === username) passHash = i.password
+        }
+        bcrypt.compare(password, passHash, function(err, bcryptRes) {
+            console.log(bcryptRes)
             if (!bcryptRes){
                 return res.status(401).send(`Password incorrect`);
             } 
@@ -86,7 +95,6 @@ router.get('/lists/all', tokenCheck, (req, res) => {
                             else {
                                 result[i].nb_tasks = resultCount[i]["COUNT(TodoListName)"];
                             }
-                            
                         }
                     }
                     res.status(200).json(result);
@@ -110,10 +118,11 @@ router.get('/lists/new', tokenCheck, (req, res) => {
             
             db.query(`INSERT INTO TodoProject.List (name) VALUES ('${nameTodo}');`, (err, result, fields) => {
                 if (err) {
-                    logger.error(`An error occured during the "${nameTodo}" todo list creation`);
+                    logger.error(`An error occured during the "${nameTodo}" todo list creation`, err);
                     return res.status(500).send("Unexpected error");
                 }
-               
+                
+                logger.debug(`"${nameTodo}" created!`)
                 // Get the id of the inserted row
                 idTodo = result.insertId;
                 res.status(200).send({
@@ -161,6 +170,7 @@ router.get('/list/:id/new-task', tokenCheck, (req, res) => {
                             logger.error(`An error occured during the "${nameTask}" task creation`);
                             return res.status(500).send("Unexpected error");
                         }
+                        logger.debug(`"${nameTask}" created into the todolist ${idTodo}!`)
         
                         idTask = result.insertId;
                         
@@ -243,9 +253,10 @@ router.get('/list/:id/update-task', tokenCheck, (req, res) => {
                 }
                 else {
                     db.query(query1 + query2, (err, result) => {
-                       
                         if (err) return res.status(500).send("Unexpected error");
-                        
+
+                        if(result[1].length === 0) return res.status(500).send("Unexpected error");
+                        logger.debug(`"${result[1][0].name}" task updated to: "${status}"`)
                         res.status(200).send({
                             id: task_id,
                             name: result[1][0].name,
@@ -268,7 +279,7 @@ function tokenCheck(req, res, next) {
         next();
     } 
     else {
-        res.status(500).send("Unexpected Error");
+        res.status(401).send("Access token is missing or invalid");
     }
 }
 

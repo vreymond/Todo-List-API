@@ -133,6 +133,8 @@ The API server will return a token to the client (generated with the JWT module)
 }
 ```
 
+The token will expires in 24h.
+
 ### 3°) Manage your todo list and tasks
 
 Once the token is generated, it needs to put it on each header of future API requests. The header name key is "bearer" and the value start by "Bearer" followed by the JWT token:

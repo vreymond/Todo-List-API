@@ -64,7 +64,7 @@ router.post('/login_check', (req, res) => {
             else {
                 logger.info(`User "${username}" has just logged`);
                 // Token generator with secret key
-                let token = jwt.sign(req.body, secret_key);
+                let token = jwt.sign(req.body, secret_key, {expiresIn: '24h'});
                 // Returning the token to client
                 res.status(200).json({
                     token: token

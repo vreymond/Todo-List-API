@@ -24,7 +24,7 @@ router.post('/login_check', (req, res) => {
     let username = user.username;
     let password = user.password;
     let query = `SELECT EXISTS (SELECT * FROM TodoProject.User WHERE
-        username="${username}" AND password="${password}")`;
+        username="${username}" AND password="${password}");`;
 
     logger.debug(`Receiving logs from client...\n \t ${JSON.stringify(user)}`);
 
@@ -59,26 +59,40 @@ router.post('/login_check', (req, res) => {
 */
 router.get('/lists/all', tokenCheck, (req, res) => {
     
+    let queryLists = `SELECT * FROM TodoProject.List;`;
+    let queryCountTasks = `SELECT TodoListName, COUNT(TodoListName) FROM TodoProject.Task 
+    WHERE TodoListName IS NOT NULL GROUP BY TodoListName`
+
     jwt.verify(req.token, 'secret_key', (err, data) => {
         if (err) {
-          res.status(401).send("Access token is missing or invalid");
+          return res.status(401).send("Access token is missing or invalid");
         } else {
-            db.query(`SELECT * FROM TodoProject.List`, (err, result) => {
-                console.log(result)
-                res.status(200).json([data]);
+            db.query(queryLists, (err, result) => {
+
+                db.query(queryCountTasks, (err, resultCount) => {
+                    if (err) return res.status(500).send("Unexpected error");
+
+                    logger.debug(`Tasks count results: \n ${JSON.stringify(resultCount)}`);
+                    for (let i in resultCount) {
+                        result[i].nb_tasks = resultCount[i]["COUNT(TodoListName)"];
+                    }
+                    
+                    res.status(200).json(result);
+                })
             })
-          
         }
-      });
+    });
 });
 
-router.get('/lists/new/:name', tokenCheck, (req, res) => {
+router.get('/lists/new', tokenCheck, (req, res) => {
 
-    let nameTodo = req.params.name;
+    let nameTodo = req.query.name;
+    if (!nameTodo) return res.status(400).send("The name of the new list is missing");
     let idTodo = 0;
+
     jwt.verify(req.token, 'secret_key', (err, data) => {
         if (err) {
-           res.status(401).send("Access token is missing or invalid");
+           return res.status(401).send("Access token is missing or invalid");
         }
         else {
             

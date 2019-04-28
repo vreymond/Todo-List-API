@@ -3,7 +3,8 @@ let program = require('commander');
 let express = require('express');
 let mysql = require('mysql');
 let EventEmitter = require('events');
-let jsonfile = require('jsonfile')
+let jsonfile = require('jsonfile');
+let bcrypt = require('bcrypt');
 
 let logger = require('./lib/logger').logger;
 let setLogLevel = require('./lib/logger').setLogLevel;
@@ -11,6 +12,7 @@ let apiRoutes = require('./routes/routes-api');
 //let dbConnect = require('./db-connect');
 
 const emitter = new EventEmitter();
+const saltRounds = 10;
 let app = express();
 
 
@@ -96,14 +98,21 @@ function createTableDB (sql, name) {
         }
         logger.debug(`Table "${name}" created`);
         if (name == "Task") {
-            db.query("INSERT IGNORE INTO TodoProject.User (username, password) VALUES ('test', '1234')", (err, result) => {
-                if (err) {
-                    logger.error(`An error occured during the table "${name}" creation`);
-                    throw err;
-                }
-                logger.debug(`Dummy "test" user created`);
+            let usernameDummy = 'test';
+            let passwordDummy = '1234';
+            bcrypt.hash(passwordDummy, saltRounds, (err, hash) => {
+                let query = `INSERT IGNORE INTO TodoProject.User (username, password) 
+                VALUES ('${usernameDummy}', '${hash}')`;
+                db.query(query, (err, result) => {
+                    if (err) {
+                        logger.error(`An error occured during the table "${name}" creation`);
+                        throw err;
+                    }
+                    logger.debug(`Dummy "test" user created`);
+                });
+                emitter.emit('databaseRDY');
             });
-            emitter.emit('databaseRDY');
+            
         }
     })
 }

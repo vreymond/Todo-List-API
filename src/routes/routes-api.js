@@ -3,9 +3,9 @@ let jwt = require ('jsonwebtoken');
 let router = express.Router();
 let jsonfile = require('jsonfile');
 let mysql = require('mysql');
+let bcrypt = require('bcrypt');
 
 let logger = require('../lib/logger').logger;
-
 
 let configDBfile = './config-db.json'
 let configDB = jsonfile.readFileSync(configDBfile)
@@ -23,11 +23,9 @@ router.post('/login_check', (req, res) => {
     let user = req.body;
     let username = user.username;
     let password = user.password;
-    let query = `SELECT EXISTS (SELECT * FROM TodoProject.User WHERE
-        username="${username}" AND password="${password}");`;
-
-    logger.debug(`Receiving logs from client...\n \t ${JSON.stringify(user)}`);
-
+   
+    let query = `SELECT password FROM TodoProject.User WHERE EXISTS (SELECT username FROM TodoProject.User WHERE username="${username}")`
+    
     db.query(query, (err , result) => {
 
         if (err) {
@@ -35,20 +33,22 @@ router.post('/login_check', (req, res) => {
             return res.status(500).send("Unexpected error");
         }
 
-        // Testing the existence of the user in the database
-        if (Object.values(result[0])[0] === 0) {
-
-            logger.error(`No user named "${username}" found in database or password is incorrect`)
-            res.status(401).send("Invalid credentials");
+        if (result.length === 0) {
+            return res.status(401).send(`Username "${username}" doesn't exists.`);
         }
-        if (Object.values(result[0])[0] === 1) {
-            
-            logger.info(`User "${username}" has just logged`);
-            let token = jwt.sign(req.body, 'secret_key');
-            res.status(200).json({
-                token: token
-            });
-        }        
+        
+        bcrypt.compare(password, result[0].password, function(err, bcryptRes) {
+            if (!bcryptRes){
+                return res.status(401).send(`Password incorrect`);
+            } 
+            else {
+                logger.info(`User "${username}" has just logged`);
+                let token = jwt.sign(req.body, 'secret_key');
+                res.status(200).json({
+                    token: token
+                });
+            }
+        });
     })
 });
 
@@ -73,6 +73,9 @@ router.get('/lists/all', tokenCheck, (req, res) => {
                     if (err) return res.status(500).send("Unexpected error");
 
                     logger.debug(`Tasks count results: \n ${JSON.stringify(resultCount)}`);
+                    // if (resultCount.length === 0) {
+                        
+                    // }
                     for (let i in resultCount) {
                         result[i].nb_tasks = resultCount[i]["COUNT(TodoListName)"];
                     }

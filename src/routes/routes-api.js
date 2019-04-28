@@ -73,13 +73,22 @@ router.get('/lists/all', tokenCheck, (req, res) => {
                     if (err) return res.status(500).send("Unexpected error");
 
                     logger.debug(`Tasks count results: \n ${JSON.stringify(resultCount)}`);
-                    // if (resultCount.length === 0) {
-                        
-                    // }
-                    for (let i in resultCount) {
-                        result[i].nb_tasks = resultCount[i]["COUNT(TodoListName)"];
+                    if (resultCount.length === 0) {
+                        for (let i in result) {
+                            result[i].nb_tasks = 0;
+                        }
                     }
-                    
+                    else {
+                        for (let i in result) {
+                            if (!resultCount[i]){
+                                result[i].nb_tasks = 0;
+                            }
+                            else {
+                                result[i].nb_tasks = resultCount[i]["COUNT(TodoListName)"];
+                            }
+                            
+                        }
+                    }
                     res.status(200).json(result);
                 })
             })

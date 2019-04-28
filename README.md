@@ -144,7 +144,7 @@ value: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InRlc3QiLCJw
 		CJpYXQiOjE1NTY0NTc2NTR9.pm3udoXwLGhaGzTtR_SaE8N1Ep75EAYWijz6i4jAEiE"
 ```
 
-Just now the client can access the 5 following routes:
+Just now the client can access the 6 following routes:
 
 #### A - Lists routes
 
@@ -234,6 +234,21 @@ The API will respond:
   }
 ]
 ```
+
+- Delete a task from a list
+
+```
+http://localhost:3000/list/{id-list}/delete-task?task_id=1
+```
+
+The API will respond:
+
+```
+{
+  "message": "Task id: 1 correctly deleted"
+}
+```
+
 
 
 # Contributors

@@ -37,7 +37,7 @@ router.post('/login_check', (req, res) => {
     let passHash;
    
     let query = `SELECT * FROM TodoProject.User WHERE EXISTS 
-    (SELECT username FROM TodoProject.User WHERE username="${username}")`
+    (SELECT username FROM TodoProject.User WHERE username="${username}");`;
 
     db.query(query, (err , result) => {
 
@@ -86,7 +86,7 @@ router.get('/lists/all', headerCheck, (req, res) => {
     
     let queryLists = `SELECT * FROM TodoProject.List;`;
     let queryCountTasks = `SELECT TodoListName, COUNT(TodoListName) FROM TodoProject.Task 
-    WHERE TodoListName IS NOT NULL GROUP BY TodoListName`
+    WHERE TodoListName IS NOT NULL GROUP BY TodoListName;`;
 
     // Token checking
     if (tokenVerifier(req.token, secret_key) === false) {
@@ -172,9 +172,9 @@ router.get('/list/:id/new-task', headerCheck, (req, res) => {
     if (!nameTask) return res.status(400).send("The name of the new task is missing");
 
     let idTask = 0;
-    let queryID = `SELECT id FROM TodoProject.List WHERE id = ${idTodo}`;
+    let queryID = `SELECT id FROM TodoProject.List WHERE id = ${idTodo};`;
     let queryInsertTask = `INSERT INTO TodoProject.Task (TodoListName, name, status) 
-    VALUES ((SELECT name FROM TodoProject.List WHERE id = ${idTodo}), '${nameTask}', 'todo')`
+    VALUES ((SELECT name FROM TodoProject.List WHERE id = ${idTodo}), '${nameTask}', 'todo');`;
 
     // Token checking
     if (tokenVerifier(req.token, secret_key) === false) {
@@ -213,9 +213,9 @@ router.get('/list/:id/new-task', headerCheck, (req, res) => {
    This is a protected route with JWT */
 router.get('/list/:id/tasks', headerCheck, (req, res) => {
     let idTodo = req.params.id;
-    let queryID = `SELECT id FROM TodoProject.List WHERE id = ${idTodo}`;
+    let queryID = `SELECT id FROM TodoProject.List WHERE id = ${idTodo};`;
     let queryTasks = `SELECT * FROM TodoProject.Task WHERE TodoListName = (SELECT name FROM
-        TodoProject.List WHERE id = ${idTodo})`;
+        TodoProject.List WHERE id = ${idTodo});`;
     
     let taskList = [];
     
@@ -269,10 +269,11 @@ router.get('/list/:id/update-task', headerCheck, (req, res) => {
         res.status(401).send("Access token is missing or invalid");
     }
     else {
+        let queryID = `SELECT id FROM TodoProject.List WHERE id = ${idTodo};`;
         let queryUpdate = `UPDATE TodoProject.Task SET status = "${status}" WHERE id = ${task_id};`;
         let queryName = ` SELECT name FROM TodoProject.Task WHERE id = ${task_id};`;
         
-        db.query(`SELECT id FROM TodoProject.List WHERE id = ${idTodo}`, (err, result) => {
+        db.query(queryID, (err, result) => {
             
             if (err) return res.status(500).send("Unexpected error");
             if (result.length === 0) {
@@ -296,6 +297,41 @@ router.get('/list/:id/update-task', headerCheck, (req, res) => {
         })
     }
 });
+
+/* Remove a task from a todo list. 
+   This is a protected route with JWT */
+router.get('/list/:id/delete-task', headerCheck, (req, res) => {
+    let idTodo = req.params.id;
+    let task_id = req.query.task_id;
+    if (!task_id) return res.status(400).send("Task id is missing in request");
+
+    // Token checking
+    if (tokenVerifier(req.token, secret_key) === false) {
+        res.status(401).send("Access token is missing or invalid");
+    }
+    else {
+        let queryID = `SELECT id FROM TodoProject.Task WHERE id = ${task_id};`;
+        let queryDelete = `DELETE FROM TodoProject.Task WHERE id = ${task_id};`;
+
+        db.query(queryID, (err, result) => {
+            if (err) return res.status(500).send("Unexpected error");
+            if (result.length === 0) {
+                res.status(404).send(`The task id "${task_id}" doesn't exists.`);
+            }
+            else {
+                db.query(queryDelete, (err, resultDel) => {
+                    
+                    if (err) return res.status(500).send("Unexpected error");
+                    logger.debug(`Task id: ${task_id} deleted`);
+        
+                    res.status(200).send({
+                        message: `Task id: ${task_id} correctly deleted`
+                    });
+                })
+            }
+        }) 
+    }
+})
 
 // Header check function that verify the header of requests
 function headerCheck(req, res, next) {

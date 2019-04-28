@@ -43,7 +43,8 @@ let configUpdate = {
     host: dbHost,
     port: portDB,
     user: dbUser,
-    password: passwordDB
+    password: passwordDB,
+    multipleStatements: true
 }
 
 jsonfile.writeFileSync('config-db.json', configUpdate, { spaces: 2 })

@@ -165,9 +165,7 @@ router.get('/list/:id/tasks', tokenCheck, (req, res) => {
 
         else {
             db.query(`SELECT id FROM TodoProject.List WHERE id = ${idTodo}`, (err, result) => {
-                if (err) {
-                    return res.status(500).send("Unexpected error");
-                } 
+                if (err) return res.status(500).send("Unexpected error");
                 
                 if (result.length === 0) {
                     res.status(404).send(`The list id "${idTodo}" doesn't exists.`);
@@ -208,20 +206,23 @@ router.get('/list/:id/update-task', tokenCheck, (req, res) => {
         }
 
         else {
+            let query1 = `UPDATE TodoProject.Task SET status = "${status}" WHERE id = ${task_id};`;
+            let query2 = ` SELECT name FROM TodoProject.Task WHERE id = ${task_id}`
+
             db.query(`SELECT id FROM TodoProject.List WHERE id = ${idTodo}`, (err, result) => {
-                if (err) {
-                    return res.status(500).send("Unexpected error");
-                } 
-                
+                if (err) return res.status(500).send("Unexpected error");
+
                 if (result.length === 0) {
                     res.status(404).send(`The list id "${idTodo}" doesn't exists.`);
                 }
                 else {
-                    db.query(`UPDATE TodoProject.Task SET status = "${status}" WHERE id = ${task_id}`, (err, result) => {
+                    db.query(query1 + query2, (err, result) => {
                        
+                        if (err) return res.status(500).send("Unexpected error");
+                        
                         res.status(200).send({
                             id: task_id,
-                            name: result.name,
+                            name: result[1][0].name,
                             status: status
                         })
                     })

@@ -2,5 +2,6 @@
   "host": "localhost",
   "port": 8889,
   "user": "root",
-  "password": "root"
+  "password": "root",
+  "multipleStatements": true
 }

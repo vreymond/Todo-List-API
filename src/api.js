@@ -1,6 +1,7 @@
 // Modules requirement
 let program = require('commander');
 let express = require('express');
+require('dotenv').config();
 let mysql = require('mysql');
 let EventEmitter = require('events');
 let jsonfile = require('jsonfile');
@@ -29,27 +30,28 @@ program
 
 
 // Get logins from commands options manager
-let portAPI, portDB,dbHost, dbUser, passwordDB;
+let portAPI, portDB, dbHost, dbUser, passwordDB;
 
-program.portAPI ? portAPI = program.portAPI : portAPI = 3000;
-program.portDB ? portDB = program.portDB : portDB = 8889;
-program.dbHost ? dbHost = program.dbHost : dbHost = 'localhost';
-program.dbUser ? dbUser = program.dbUser : dbUser = 'root';
-program.password ? passwordDB = program.password : passwordDB = 'root';
+program.portAPI ? portAPI = program.portAPI : portAPI = process.env.API_PORT;
+program.portDB ? portDB = program.portDB : portDB = process.env.DB_PORT;
+program.dbHost ? dbHost = program.dbHost : dbHost = process.env.DB_HOST;
+program.dbUser ? dbUser = program.dbUser : dbUser = process.env.DB_USER;
+program.password ? passwordDB = program.password : passwordDB = process.env.DB_PASSWORD;
 
 
 logger.info(`***** Starting Todo List API *****`);
 
-let file = './config-db.json';
 let configUpdate = {
     host: dbHost,
     port: portDB,
     user: dbUser,
     password: passwordDB,
-    multipleStatements: true
+    multipleStatements: process.env.DB_MULTIPLESTATEMENTS
 }
+
+console.log(configUpdate)
 // Updating config file with given options
-jsonfile.writeFileSync('config-db.json', configUpdate, { spaces: 2 })
+//jsonfile.writeFileSync('config-db.json', configUpdate, { spaces: 2 })
 
 // Starting connection with the mysql server
 let db = mysql.createConnection(configUpdate)

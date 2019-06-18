@@ -12,6 +12,8 @@ let logger = require('./lib/logger').logger;
 let setLogLevel = require('./lib/logger').setLogLevel;
 let apiRoutes = require('./routes/routes-api');
 
+const mysqlConnection = require("./middlewares/database");
+
 const emitter = new EventEmitter();
 const saltRounds = 10;
 let app = express();
@@ -54,14 +56,15 @@ console.log(configUpdate)
 //jsonfile.writeFileSync('config-db.json', configUpdate, { spaces: 2 })
 
 // Starting connection with the mysql server
-let db = mysql.createConnection(configUpdate)
+//let db = mysql.createConnection(configUpdate)
+let db = mysqlConnection
 
-db.connect(err => {
-    if (err) {
-        logger.error(`An error occured during the connection on the MySQL server.`)
-        throw err;
-    }
-    logger.info(`Connected to MySQL server on: "http://${dbHost}:${portDB}/"`);
+// db.connect(err => {
+//     if (err) {
+//         logger.error(`An error occured during the connection on the MySQL server.`)
+//         throw err;
+//     }
+//     logger.info(`Connected to MySQL server on: "http://${dbHost}:${portDB}/"`);
 
     // Creation of the TodoProject database
     db.query("CREATE DATABASE IF NOT EXISTS TodoProject", (err, result) => {
@@ -93,7 +96,7 @@ db.connect(err => {
         createTableDB(tableTask, "Task");
         
     })
-})
+//})
 
 function createTableDB (sql, name) {
 
